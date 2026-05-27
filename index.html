@@ -280,7 +280,7 @@ body.dark .p-alert{color:var(--yellow)}
       <a data-route="equipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg>Equipe</a>
     </nav>
 
-    <div class="sb-foot" id="sbVersion">v1.1 · CORS proxy</div>
+    <div class="sb-foot" id="sbVersion">v1.2 · form-data</div>
   </aside>
 
   <div class="main">
@@ -396,7 +396,7 @@ body.dark .p-alert{color:var(--yellow)}
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxAG4BjH6_rfVrj8MbAoowZ_mgrHpZH_VxtRsrZwJ6l4fEQ-V9cQ6EQxrD4JSdA_WQm6g/exec';
 const API_TOKEN = 'dm-bi-7K9mPx2Lq8RvN4tHzW6cYbF3aJ5eU';
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
 let currentUser = null;
 let allData = null;
 let selectedUserForLogin = null;
@@ -430,9 +430,7 @@ async function apiGet(action, params){
   if(currentUser) url.searchParams.set('email', currentUser.email);
   Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
 
-  const proxiedUrl = CORS_PROXY + encodeURIComponent(url.toString());
-
-  const res = await fetch(proxiedUrl, {method:'GET', redirect:'follow'});
+  const res = await fetch(url.toString(), {method:'GET', redirect:'follow'});
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
   if(!json.ok) throw new Error(json.error || 'Erro na API');
@@ -440,18 +438,15 @@ async function apiGet(action, params){
 }
 
 async function apiPost(action, payload){
-  const body = {
-    token: API_TOKEN,
-    action: action,
-    email: currentUser ? currentUser.email : null,
-    payload: payload || {}
-  };
-  const proxiedUrl = CORS_PROXY + encodeURIComponent(API_URL);
+  const formData = new URLSearchParams();
+  formData.append('token', API_TOKEN);
+  formData.append('action', action);
+  formData.append('email', currentUser ? currentUser.email : '');
+  formData.append('payload', JSON.stringify(payload || {}));
 
-  const res = await fetch(proxiedUrl, {
+  const res = await fetch(API_URL, {
     method: 'POST',
-    headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify(body),
+    body: formData,
     redirect: 'follow'
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -462,6 +457,7 @@ async function apiPost(action, payload){
 
 function can(action){
   if(!currentUser || !currentUser.permissoes) return false;
+  if(currentUser.permissoes.indexOf('*') !== -1) return true;
   return currentUser.permissoes.indexOf(action) !== -1;
 }
 
