@@ -280,7 +280,7 @@ body.dark .p-alert{color:var(--yellow)}
       <a data-route="equipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg>Equipe</a>
     </nav>
 
-    <div class="sb-foot" id="sbVersion">v1.0 · 26.MAI.26</div>
+    <div class="sb-foot" id="sbVersion">v1.1 · CORS proxy</div>
   </aside>
 
   <div class="main">
@@ -396,6 +396,7 @@ body.dark .p-alert{color:var(--yellow)}
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxAG4BjH6_rfVrj8MbAoowZ_mgrHpZH_VxtRsrZwJ6l4fEQ-V9cQ6EQxrD4JSdA_WQm6g/exec';
 const API_TOKEN = 'dm-bi-7K9mPx2Lq8RvN4tHzW6cYbF3aJ5eU';
+const CORS_PROXY = 'https://corsproxy.io/?url=';
 
 let currentUser = null;
 let allData = null;
@@ -430,11 +431,9 @@ async function apiGet(action, params){
   if(currentUser) url.searchParams.set('email', currentUser.email);
   Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
 
-  const res = await fetch(url.toString(), {
-    method: 'GET',
-    mode: 'cors',
-    redirect: 'follow'
-  });
+  const proxiedUrl = CORS_PROXY + encodeURIComponent(url.toString());
+
+  const res = await fetch(proxiedUrl, {method:'GET', redirect:'follow'});
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
   if(!json.ok) throw new Error(json.error || 'Erro na API');
@@ -448,10 +447,10 @@ async function apiPost(action, payload){
     email: currentUser ? currentUser.email : null,
     payload: payload || {}
   };
-  // Usar text/plain evita o preflight CORS (que o Apps Script não suporta)
-  const res = await fetch(API_URL, {
+  const proxiedUrl = CORS_PROXY + encodeURIComponent(API_URL);
+
+  const res = await fetch(proxiedUrl, {
     method: 'POST',
-    mode: 'cors',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify(body),
     redirect: 'follow'
@@ -701,7 +700,7 @@ function renderProdutos(){
     if(podeEditar || podeDeletar){
       html += '<td>';
       if(podeEditar) html += '<button class="btn-action" onclick="abrirEditarProduto(\'' + p.id + '\')">Editar</button> ';
-      if(podeDeletar) html += '<button class="btn-action danger" onclick="deletarProduto(\'' + p.id + '\',\'' + (p.sku||'').replace(/'/g,"") + '\')">Excluir</button>';
+      if(podeDeletar) html += '<button class="btn-action danger" onclick="deletarProduto(\'' + p.id + '\',\'' + (p.sku||'').replace(/\x27/g,"") + '\')">Excluir</button>';
       html += '</td>';
     }
     html += '</tr>';
